@@ -120,7 +120,10 @@ class OrganizationDomainService:
             async with session.begin_nested():
                 return await repository.update(
                     organization_domain,
-                    update_dict={"verified_at": utc_now()},
+                    update_dict={
+                        "verified_at": utc_now(),
+                        "verification_lost_at": None,
+                    },
                     flush=True,
                 )
         except IntegrityError as e:
@@ -152,7 +155,11 @@ class OrganizationDomainService:
                     domain=organization_domain.domain,
                 )
                 await repository.update(
-                    organization_domain, update_dict={"verified_at": None}
+                    organization_domain,
+                    update_dict={
+                        "verified_at": None,
+                        "verification_lost_at": utc_now(),
+                    },
                 )
         return organization_domains
 
