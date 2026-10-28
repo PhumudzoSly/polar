@@ -1,7 +1,7 @@
 import { useIsManagedAsCode } from '@/hooks/permissions'
 import { useProductVersions } from '@/hooks/queries/catalogs'
 import { schemas } from '@polar-sh/client'
-import { Button, Text } from '@polar-sh/orbit'
+import { Text } from '@polar-sh/orbit'
 import { Box } from '@polar-sh/orbit/Box'
 import {
   Check,
@@ -141,18 +141,22 @@ export const ProductVersionSelect = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="secondary">
-          <span className="inline-flex items-center gap-1">
-            <span>{selected.name ?? 'Untitled'}</span>
+        {/* Matches the Orbit SelectTrigger, which only works inside a Radix Select. */}
+        <button
+          type="button"
+          className="dark:bg-polar-800 dark:hover:border-polar-600 dark:border-polar-700 flex h-10 cursor-pointer items-center gap-x-2 rounded-xl border border-gray-200 bg-white px-3 text-sm text-black shadow-xs transition-colors hover:border-gray-300 dark:text-white"
+        >
+          <span>
+            {selected.name ?? 'Untitled'}{' '}
             <span className="dark:text-polar-500 text-gray-500">
               ·{' '}
               {selected.is_current
                 ? 'Current'
                 : formatPublishedAt(selected.published_at)}
             </span>
-            <ChevronDown size={14} />
           </span>
-        </Button>
+          <ChevronDown size={16} className="opacity-50" />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
