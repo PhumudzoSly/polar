@@ -23,6 +23,7 @@ import { useCallback } from 'react'
 import { DashboardBody } from '../../Layout/DashboardLayout'
 import { ProductMetricsView } from './ProductMetricsView'
 import { ProductOverview } from './ProductOverview'
+import { ProductVersionBanner } from './ProductVersionBanner'
 import { ProductVersionSelect } from './ProductVersionSelect'
 
 const ProductTypeDisplayColor: Record<string, StatusColor> = {
@@ -288,6 +289,7 @@ export const ProductPage = ({ organization, product }: ProductPageProps) => {
           </div>
         }
       >
+        <ProductVersionBanner organization={organization} product={product} />
         <TabsList className="pb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
