@@ -159,7 +159,8 @@ export const ProductVersionSelect = ({
         align="end"
         className="w-[320px] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-2xl p-0 duration-150"
       >
-        <Box flexDirection="column">
+        {/* Height cuts through a row so it's obvious the list scrolls. */}
+        <Box flexDirection="column" maxHeight={440} overflowY="auto">
           {current ? (
             <>
               <SectionLabel action={viewAll}>Current version</SectionLabel>
@@ -181,11 +182,8 @@ export const ProductVersionSelect = ({
               <SectionLabel action={current ? undefined : viewAll}>
                 {current ? 'Previous versions' : 'Versions'}
               </SectionLabel>
-              {/* Height cuts through a row so it's obvious the list scrolls. */}
               <Box
                 flexDirection="column"
-                maxHeight={340}
-                overflowY="auto"
                 paddingHorizontal="xs"
                 paddingBottom="xs"
               >
