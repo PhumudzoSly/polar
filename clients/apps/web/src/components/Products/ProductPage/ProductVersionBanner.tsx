@@ -3,7 +3,7 @@ import { useProductVersions } from '@/hooks/queries/catalogs'
 import { schemas } from '@polar-sh/client'
 import { Button, Text } from '@polar-sh/orbit'
 import { Box } from '@polar-sh/orbit/Box'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { formatPublishedAt } from './ProductVersionSelect'
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
@@ -24,8 +24,13 @@ export const ProductVersionBanner = ({
   organization: schemas['Organization']
   product: schemas['Product']
 }) => {
+  const router = useRouter()
   const managedAsCode = useIsManagedAsCode(organization.id)
-  const { data: versions } = useProductVersions(product.id, managedAsCode)
+  const { data: versions } = useProductVersions(
+    organization.id,
+    product.external_id,
+    managedAsCode,
+  )
   const selected = versions?.find(
     (version) => version.product_id === product.id,
   )
@@ -60,17 +65,31 @@ export const ProductVersionBanner = ({
           .
         </Text>
       </Box>
-      <Box alignItems="center" columnGap="2xl" flexShrink={0}>
+      <Box
+        alignItems="center"
+        flexWrap="wrap"
+        columnGap="2xl"
+        rowGap="l"
+        flexShrink={0}
+      >
         <Stat
           label="Published"
           value={formatPublishedAt(selected.published_at)}
         />
-        <Stat label="Customers" value={selected.customers.toLocaleString()} />
-        <Link
-          href={`/dashboard/${organization.slug}/products/${current.product_id}`}
+        <Stat
+          label="Subscriptions"
+          value={selected.active_subscriptions_count.toLocaleString()}
+        />
+        <Button
+          variant="secondary"
+          onClick={() =>
+            router.push(
+              `/dashboard/${organization.slug}/products/${current.product_id}`,
+            )
+          }
         >
-          <Button variant="secondary">View current version</Button>
-        </Link>
+          View current version
+        </Button>
       </Box>
     </Box>
   )
