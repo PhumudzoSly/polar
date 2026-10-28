@@ -167,9 +167,6 @@ export const ProductVersionSelect = ({
                 flexDirection="column"
                 paddingHorizontal="xs"
                 paddingBottom="xs"
-                borderBottomWidth={1}
-                borderStyle="solid"
-                borderColor="border-secondary"
               >
                 <VersionRow
                   organization={organization}
