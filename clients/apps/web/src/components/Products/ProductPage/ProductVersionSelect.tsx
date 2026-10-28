@@ -111,12 +111,11 @@ export const ProductVersionSelect = ({
   product: schemas['Product']
 }) => {
   const managedAsCode = useIsManagedAsCode(organization.id)
-  const { data } = useProductVersions(
+  const { data: versions } = useProductVersions(
     organization.id,
     product.external_id,
     managedAsCode,
   )
-  const versions = data?.items
   const selected = versions?.find(
     (version) => version.product_id === product.id,
   )
