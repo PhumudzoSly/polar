@@ -1,5 +1,5 @@
 import { api } from '@/utils/client'
-import { unwrap } from '@polar-sh/client'
+import { schemas, unwrap } from '@polar-sh/client'
 import { useQuery } from '@tanstack/react-query'
 import { defaultRetry } from './retry'
 
@@ -57,15 +57,26 @@ export const useProductVersions = (
 ) =>
   useQuery({
     queryKey: ['catalogs', 'product', { organizationId, externalId }],
-    queryFn: () =>
-      unwrap(
-        api.GET('/v1/products/external/{external_id}/versions', {
-          params: {
-            path: { external_id: externalId ?? '' },
-            query: { organization_id: organizationId, limit: 100 },
-          },
-        }),
-      ),
+    queryFn: async () => {
+      const versions: schemas['ProductVersion'][] = []
+      let page = 1
+      while (true) {
+        const data = await unwrap(
+          api.GET('/v1/products/external/{external_id}/versions', {
+            params: {
+              path: { external_id: externalId ?? '' },
+              query: { organization_id: organizationId, page, limit: 100 },
+            },
+          }),
+        )
+        versions.push(...data.items)
+        if (data.pagination.max_page === page) {
+          break
+        }
+        page++
+      }
+      return versions
+    },
     retry: defaultRetry,
     staleTime: 0,
     enabled: enabled && externalId !== null,
