@@ -186,7 +186,8 @@ export const ProductVersionSelect = ({
                 flexDirection="column"
                 maxHeight={340}
                 overflowY="auto"
-                padding="xs"
+                paddingHorizontal="xs"
+                paddingBottom="xs"
               >
                 {previous.map((version) => (
                   <VersionRow
