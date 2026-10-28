@@ -50,16 +50,23 @@ export const useCatalogs = (
     staleTime: 0,
   })
 
-export const useProductVersions = (productId: string, enabled: boolean) =>
+export const useProductVersions = (
+  organizationId: string,
+  externalId: string | null,
+  enabled: boolean,
+) =>
   useQuery({
-    queryKey: ['catalogs', 'product', { productId }],
+    queryKey: ['catalogs', 'product', { organizationId, externalId }],
     queryFn: () =>
       unwrap(
-        api.GET('/v1/products/{id}/versions', {
-          params: { path: { id: productId } },
+        api.GET('/v1/products/external/{external_id}/versions', {
+          params: {
+            path: { external_id: externalId ?? '' },
+            query: { organization_id: organizationId, limit: 100 },
+          },
         }),
       ),
     retry: defaultRetry,
     staleTime: 0,
-    enabled,
+    enabled: enabled && externalId !== null,
   })

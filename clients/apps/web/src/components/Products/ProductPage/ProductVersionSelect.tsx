@@ -3,7 +3,12 @@ import { useProductVersions } from '@/hooks/queries/catalogs'
 import { schemas } from '@polar-sh/client'
 import { Button, Text } from '@polar-sh/orbit'
 import { Box } from '@polar-sh/orbit/Box'
-import { Check, ChevronDown, Users } from '@polar-sh/orbit/icons'
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  PeopleAltOutlined,
+} from '@polar-sh/orbit/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +32,63 @@ export const formatPublishedAt = (datetime: string | null) => {
 const pluralize = (count: number, noun: string) =>
   `${count.toLocaleString()} ${count === 1 ? noun : `${noun}s`}`
 
+const SectionLabel = ({ children }: { children: string }) => (
+  <Box paddingHorizontal="m" paddingTop="m" paddingBottom="xs">
+    <Text variant="caption" color="muted">
+      {children}
+    </Text>
+  </Box>
+)
+
+const VersionRow = ({
+  organization,
+  version,
+  selected,
+}: {
+  organization: schemas['Organization']
+  version: schemas['ProductVersion']
+  selected: boolean
+}) => {
+  const count = version.active_subscriptions_count
+  return (
+    <DropdownMenuItem
+      asChild
+      className="dark:focus:bg-polar-800 gap-3 rounded-md px-2 py-2 focus:bg-gray-100"
+    >
+      <Link
+        href={`/dashboard/${organization.slug}/products/${version.product_id}`}
+      >
+        <Box alignItems="center" columnGap="s" flex={1} minWidth={0}>
+          <Text truncate variant={selected ? 'title' : 'default'}>
+            {version.name ?? 'Untitled'}
+          </Text>
+          {selected ? <Check className="size-3.5! shrink-0" /> : null}
+        </Box>
+        <Box
+          alignItems="center"
+          columnGap="xs"
+          aria-label={pluralize(count, 'subscription')}
+        >
+          <Text as="span" color={count ? 'muted' : 'disabled'}>
+            <PeopleAltOutlined sx={{ fontSize: 14, display: 'block' }} />
+          </Text>
+          {/* Fixed widths keep the icon and date columns aligned across rows. */}
+          <Box width={16} justifyContent="end">
+            <Text tabularNums color={count ? 'default' : 'disabled'}>
+              {count}
+            </Text>
+          </Box>
+        </Box>
+        <Box width={44} justifyContent="end">
+          <Text variant="caption" color="muted" tabularNums wrap="nowrap">
+            {formatPublishedAt(version.published_at)}
+          </Text>
+        </Box>
+      </Link>
+    </DropdownMenuItem>
+  )
+}
+
 export const ProductVersionSelect = ({
   organization,
   product,
@@ -35,7 +97,12 @@ export const ProductVersionSelect = ({
   product: schemas['Product']
 }) => {
   const managedAsCode = useIsManagedAsCode(organization.id)
-  const { data: versions } = useProductVersions(product.id, managedAsCode)
+  const { data } = useProductVersions(
+    organization.id,
+    product.external_id,
+    managedAsCode,
+  )
+  const versions = data?.items
   const selected = versions?.find(
     (version) => version.product_id === product.id,
   )
@@ -44,10 +111,8 @@ export const ProductVersionSelect = ({
     return null
   }
 
-  const totalCustomers = versions.reduce(
-    (total, version) => total + version.customers,
-    0,
-  )
+  const current = versions.find((version) => version.is_current)
+  const previous = versions.filter((version) => !version.is_current)
 
   return (
     <DropdownMenu>
@@ -67,80 +132,80 @@ export const ProductVersionSelect = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[340px] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-2xl p-0 duration-150"
+        className="w-[320px] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-2xl p-0 duration-150"
       >
-        <Box flexDirection="column" maxHeight={560}>
-          <Box
-            alignItems="center"
-            justifyContent="between"
-            paddingHorizontal="l"
-            paddingTop="l"
-            paddingBottom="xs"
-          >
-            <Text variant="title" as="h2">
-              Versions
-            </Text>
-            <Text variant="caption" color="muted" tabularNums>
-              {pluralize(versions.length, 'version')} ·{' '}
-              {pluralize(totalCustomers, 'customer')}
-            </Text>
-          </Box>
+        <Box flexDirection="column">
+          {current ? (
+            <>
+              <SectionLabel>Current version</SectionLabel>
+              <Box
+                flexDirection="column"
+                paddingHorizontal="xs"
+                paddingBottom="xs"
+                borderBottomWidth={1}
+                borderStyle="solid"
+                borderColor="border-secondary"
+              >
+                <VersionRow
+                  organization={organization}
+                  version={current}
+                  selected={current.product_id === product.id}
+                />
+              </Box>
+            </>
+          ) : null}
+          {previous.length > 0 ? (
+            <>
+              <SectionLabel>
+                {current ? 'Previous versions' : 'Versions'}
+              </SectionLabel>
+              {/* Height cuts through a row so it's obvious the list scrolls. */}
+              <Box
+                flexDirection="column"
+                maxHeight={340}
+                overflowY="auto"
+                padding="xs"
+              >
+                {previous.map((version) => (
+                  <VersionRow
+                    key={version.product_id}
+                    organization={organization}
+                    version={version}
+                    selected={version.product_id === product.id}
+                  />
+                ))}
+              </Box>
+            </>
+          ) : null}
           <Box
             flexDirection="column"
-            minHeight={0}
-            overflowY="auto"
-            padding="s"
+            padding="xs"
+            borderTopWidth={1}
+            borderStyle="solid"
+            borderColor="border-secondary"
           >
-            {versions.map((version) => (
-              <DropdownMenuItem
-                key={version.product_id}
-                asChild
-                className="dark:focus:bg-polar-800 gap-3 rounded-lg px-2 py-1.5 focus:bg-gray-100"
-              >
-                <Link
-                  href={`/dashboard/${organization.slug}/products/${version.product_id}`}
-                >
-                  <Box width={14} flexShrink={0} justifyContent="center">
-                    {version.product_id === product.id ? (
-                      <Check className="size-3.5!" />
-                    ) : null}
-                  </Box>
-                  <Box alignItems="center" columnGap="s" flex={1} minWidth={0}>
-                    <Text truncate>{version.name ?? 'Untitled'}</Text>
-                    {version.is_current ? (
-                      <Box
-                        as="span"
-                        display="inline-flex"
-                        flexShrink={0}
-                        paddingHorizontal="s"
-                        borderRadius="full"
-                        backgroundColor="background-secondary"
-                      >
-                        <Text as="span" variant="caption" color="muted">
-                          Current
-                        </Text>
-                      </Box>
-                    ) : null}
-                  </Box>
-                  <Text color="muted" wrap="nowrap" tabularNums>
-                    {formatPublishedAt(version.published_at)}
+            <DropdownMenuItem
+              asChild
+              className="dark:focus:bg-polar-800 rounded-md px-2 py-2 focus:bg-gray-100"
+            >
+              <Link href={`/dashboard/${organization.slug}/products/versions`}>
+                <Box flex={1} justifyContent="between" alignItems="center">
+                  <Text variant="caption" color="muted" tabularNums>
+                    {pluralize(data.pagination.total_count, 'version')}
                   </Text>
                   <Box
                     alignItems="center"
-                    justifyContent="end"
                     columnGap="xs"
-                    minWidth={48}
-                    flexShrink={0}
-                    aria-label={pluralize(version.customers, 'customer')}
+                    color="text-secondary"
                   >
-                    <Users className="dark:text-polar-500 size-3.5! text-gray-500" />
-                    <Text color="muted" tabularNums>
-                      {version.customers.toLocaleString()}
+                    <Text variant="caption" color="inherit">
+                      View all
                     </Text>
+                    <ChevronRight size={14} />
                   </Box>
-                </Link>
-              </DropdownMenuItem>
-            ))}
+                </Box>
+              </Link>
+            </DropdownMenuItem>
           </Box>
         </Box>
       </DropdownMenuContent>
