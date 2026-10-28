@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@polar-sh/ui/components/ui/dropdown-menu'
 import Link from 'next/link'
+import { ReactNode } from 'react'
 
 export const formatPublishedAt = (datetime: string | null) => {
   if (!datetime) return ''
@@ -32,11 +33,24 @@ export const formatPublishedAt = (datetime: string | null) => {
 const pluralize = (count: number, noun: string) =>
   `${count.toLocaleString()} ${count === 1 ? noun : `${noun}s`}`
 
-const SectionLabel = ({ children }: { children: string }) => (
-  <Box paddingHorizontal="m" paddingTop="m" paddingBottom="xs">
+const SectionLabel = ({
+  children,
+  action,
+}: {
+  children: string
+  action?: ReactNode
+}) => (
+  <Box
+    justifyContent="between"
+    alignItems="center"
+    paddingHorizontal="m"
+    paddingTop="m"
+    paddingBottom="xs"
+  >
     <Text variant="caption" color="muted">
       {children}
     </Text>
+    {action}
   </Box>
 )
 
@@ -111,6 +125,17 @@ export const ProductVersionSelect = ({
     return null
   }
 
+  const viewAll = (
+    <DropdownMenuItem
+      asChild
+      className="dark:text-polar-500 gap-1 rounded-md p-0 text-xs text-gray-500 focus:bg-transparent focus:text-gray-950 dark:focus:bg-transparent dark:focus:text-white [&_svg]:size-3.5!"
+    >
+      <Link href={`/dashboard/${organization.slug}/products/versions`}>
+        View all
+        <ChevronRight />
+      </Link>
+    </DropdownMenuItem>
+  )
   const current = versions.find((version) => version.is_current)
   const previous = versions.filter((version) => !version.is_current)
 
@@ -137,7 +162,7 @@ export const ProductVersionSelect = ({
         <Box flexDirection="column">
           {current ? (
             <>
-              <SectionLabel>Current version</SectionLabel>
+              <SectionLabel action={viewAll}>Current version</SectionLabel>
               <Box
                 flexDirection="column"
                 paddingHorizontal="xs"
@@ -156,7 +181,7 @@ export const ProductVersionSelect = ({
           ) : null}
           {previous.length > 0 ? (
             <>
-              <SectionLabel>
+              <SectionLabel action={current ? undefined : viewAll}>
                 {current ? 'Previous versions' : 'Versions'}
               </SectionLabel>
               {/* Height cuts through a row so it's obvious the list scrolls. */}
@@ -177,36 +202,6 @@ export const ProductVersionSelect = ({
               </Box>
             </>
           ) : null}
-          <Box
-            flexDirection="column"
-            padding="xs"
-            borderTopWidth={1}
-            borderStyle="solid"
-            borderColor="border-secondary"
-          >
-            <DropdownMenuItem
-              asChild
-              className="dark:focus:bg-polar-800 rounded-md px-2 py-2 focus:bg-gray-100"
-            >
-              <Link href={`/dashboard/${organization.slug}/products/versions`}>
-                <Box flex={1} justifyContent="between" alignItems="center">
-                  <Text variant="caption" color="muted" tabularNums>
-                    {pluralize(data.pagination.total_count, 'version')}
-                  </Text>
-                  <Box
-                    alignItems="center"
-                    columnGap="xs"
-                    color="text-secondary"
-                  >
-                    <Text variant="caption" color="inherit">
-                      View all
-                    </Text>
-                    <ChevronRight size={14} />
-                  </Box>
-                </Box>
-              </Link>
-            </DropdownMenuItem>
-          </Box>
         </Box>
       </DropdownMenuContent>
     </DropdownMenu>
