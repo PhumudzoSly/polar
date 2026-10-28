@@ -23,6 +23,7 @@ import { useCallback } from 'react'
 import { DashboardBody } from '../../Layout/DashboardLayout'
 import { ProductMetricsView } from './ProductMetricsView'
 import { ProductOverview } from './ProductOverview'
+import { ProductVersionSelect } from './ProductVersionSelect'
 
 const ProductTypeDisplayColor: Record<string, StatusColor> = {
   subscription: 'green',
@@ -191,6 +192,10 @@ export const ProductPage = ({ organization, product }: ProductPageProps) => {
         }
         header={
           <div className="flex flex-row items-center justify-between gap-2">
+            <ProductVersionSelect
+              organization={organization}
+              product={product}
+            />
             {product.is_archived || managedAsCode ? null : (
               <div>
                 <Button

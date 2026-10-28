@@ -3,87 +3,15 @@
 import { DashboardBody } from '@/components/Layout/DashboardLayout'
 import Pagination from '@/components/Pagination/Pagination'
 import { EmptyState } from '@/components/Shared/EmptyState'
+import { VersionRow } from '@/components/Catalog/VersionRow'
 import { useCatalogs } from '@/hooks/queries/catalogs'
 import { schemas } from '@polar-sh/client'
-import {
-  Grid,
-  List,
-  ListItem,
-  Text,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@polar-sh/orbit'
-import { Box } from '@polar-sh/orbit/Box'
+import { List } from '@polar-sh/orbit'
 import { HistoryRounded } from '@polar-sh/orbit/icons'
-import FormattedDateTime from '@polar-sh/ui/components/atoms/FormattedDateTime'
-import PolarTimeAgo from '@polar-sh/ui/components/atoms/PolarTimeAgo'
 import { useSearchParams } from 'next/navigation'
 import { parseAsInteger, useQueryState } from 'nuqs'
-import { useState } from 'react'
 
 const PAGE_SIZE = 20
-
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000
-
-const publishedAt = (catalog: schemas['Catalog']) =>
-  catalog.published_at ?? catalog.created_at
-
-const CurrentBadge = () => (
-  <Box
-    as="span"
-    display="inline-flex"
-    paddingHorizontal="m"
-    paddingVertical="xs"
-    borderRadius="full"
-    backgroundColor="background-inverse"
-  >
-    <Text as="span" color="inverse">
-      Current
-    </Text>
-  </Box>
-)
-
-const PublishedAt = ({ catalog }: { catalog: schemas['Catalog'] }) => {
-  const [now] = useState(() => Date.now())
-  const datetime = publishedAt(catalog)
-
-  if (now - new Date(datetime).getTime() >= WEEK_MS) {
-    return <FormattedDateTime datetime={datetime} />
-  }
-
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <span>
-          <PolarTimeAgo date={new Date(datetime)} />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        <FormattedDateTime datetime={datetime} resolution="time" />
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
-const VersionRow = ({ catalog }: { catalog: schemas['Catalog'] }) => (
-  <ListItem className="px-6 py-5">
-    <Grid
-      templateColumns="minmax(0, 1fr) auto 130px"
-      columnGap="xl"
-      alignItems="center"
-      width="100%"
-    >
-      <Text variant="body" color={catalog.name ? 'default' : 'muted'} truncate>
-        {catalog.name ?? 'Untitled'}
-      </Text>
-      <Box>{catalog.status === 'live' ? <CurrentBadge /> : null}</Box>
-      <Text variant="body" color="muted" align="right">
-        <PublishedAt catalog={catalog} />
-      </Text>
-    </Grid>
-  </ListItem>
-)
 
 export default function VersionsPage({
   organization,
@@ -110,7 +38,13 @@ export default function VersionsPage({
         >
           <List size="small">
             {catalogs.items.map((catalog) => (
-              <VersionRow key={catalog.id} catalog={catalog} />
+              <VersionRow
+                key={catalog.id}
+                name={catalog.name}
+                isCurrent={catalog.status === 'live'}
+                customers={catalog.customers}
+                publishedAt={catalog.published_at ?? catalog.created_at}
+              />
             ))}
           </List>
         </Pagination>

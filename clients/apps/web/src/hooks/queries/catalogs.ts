@@ -49,3 +49,17 @@ export const useCatalogs = (
     retry: defaultRetry,
     staleTime: 0,
   })
+
+export const useProductVersions = (productId: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['catalogs', 'product', { productId }],
+    queryFn: () =>
+      unwrap(
+        api.GET('/v1/products/{id}/versions', {
+          params: { path: { id: productId } },
+        }),
+      ),
+    retry: defaultRetry,
+    staleTime: 0,
+    enabled,
+  })
