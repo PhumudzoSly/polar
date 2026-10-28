@@ -27,6 +27,7 @@ from polar.meter.filter import Filter
 from polar.meter.schemas import MeterCreateBase
 from polar.meter.unit import MeterUnit
 from polar.models.benefit import BenefitType, BenefitVisibility
+from polar.models.catalog import CatalogStatus
 from polar.models.product import ProductVisibility
 from polar.models.product_price import ProductPriceAmountType
 from polar.organization.schemas import OrganizationID
@@ -705,6 +706,12 @@ class ConfigSkippedResource(Schema):
     )
 
 
+class ConfigExportCatalog(ConfigCatalog):
+    status: CatalogStatus = Field(
+        description="`live` for the catalog new checkouts use, `archived` otherwise."
+    )
+
+
 class ConfigExport(Schema):
     config: ConfigExportDocument = Field(
         description=(
@@ -716,5 +723,10 @@ class ConfigExport(Schema):
         description=(
             "Resources left out of the exported config. "
             "At most the section's config limit is listed."
+        )
+    )
+    catalog: ConfigExportCatalog | None = Field(
+        description=(
+            "The catalog version the products come from. None before the first publish."
         )
     )

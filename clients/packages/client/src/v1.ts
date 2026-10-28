@@ -6267,6 +6267,9 @@ export interface paths {
      * Export Config
      * @description Export the organization's current config as a declarative config document.
      *
+     *     With `catalog`, products come from that catalog version. Settings, meters
+     *     and benefits aren't versioned, so they're always the current ones.
+     *
      *     `config` has the shape plan and apply accept, without `organization_id`:
      *     planning it for the same organization without edits reports no changes.
      *     Resources without an `external_id`, archived ones, ones config can't express
@@ -6334,6 +6337,10 @@ export interface paths {
      *
      *     Returns the action for each resource, and every issue: `error` issues make
      *     apply fail, `warning` issues don't.
+     *
+     *     With an archived `catalog` version, products are compared to that version
+     *     instead of the live one. The plan then shows the changes from that version,
+     *     not what apply would do, and `catalog` is None.
      *
      *     Each section requires the read or write scope for its resource.
      *
@@ -13812,6 +13819,17 @@ export interface components {
       /** Detail */
       detail: string
     }
+    /** CatalogNotFound */
+    CatalogNotFound: {
+      /**
+       * Error
+       * @example CatalogNotFound
+       * @constant
+       */
+      error: 'CatalogNotFound'
+      /** Detail */
+      detail: string
+    }
     /**
      * CatalogStatus
      * @enum {string}
@@ -16483,6 +16501,24 @@ export interface components {
        * @description Resources left out of the exported config. At most the section's config limit is listed.
        */
       skipped: components['schemas']['ConfigSkippedResource'][]
+      /** @description The catalog version the products come from. None before the first publish. */
+      catalog: components['schemas']['ConfigExportCatalog'] | null
+    }
+    /** ConfigExportCatalog */
+    ConfigExportCatalog: {
+      /**
+       * Id
+       * Format: uuid4
+       * @description The ID of the object.
+       */
+      id: string
+      /**
+       * Name
+       * @description Name of the catalog.
+       */
+      name: string | null
+      /** @description `live` for the catalog new checkouts use, `archived` otherwise. */
+      status: components['schemas']['CatalogStatus']
     }
     /** ConfigExportDocument */
     ConfigExportDocument: {
@@ -63559,6 +63595,8 @@ export interface operations {
       query?: {
         /** @description The ID of the organization to export. **Required unless you use an organization token.** */
         organization_id?: string | null
+        /** @description The catalog to use: `live`, or the ID of a published catalog. */
+        catalog?: 'live' | string
       }
       header?: never
       path?: never
@@ -63593,6 +63631,15 @@ export interface operations {
           'application/json':
             | components['schemas']['NotPermitted']
             | components['schemas']['ConfigAsCodeNotEnabled']
+        }
+      }
+      /** @description No published catalog has this ID. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CatalogNotFound']
         }
       }
       /** @description Validation Error */
@@ -63675,7 +63722,10 @@ export interface operations {
   }
   'config:plan': {
     parameters: {
-      query?: never
+      query?: {
+        /** @description The catalog to use: `live`, or the ID of a published catalog. */
+        catalog?: 'live' | string
+      }
       header?: never
       path?: never
       cookie?: never
@@ -63713,6 +63763,15 @@ export interface operations {
           'application/json':
             | components['schemas']['NotPermitted']
             | components['schemas']['ConfigAsCodeNotEnabled']
+        }
+      }
+      /** @description No published catalog has this ID. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CatalogNotFound']
         }
       }
       /** @description Validation Error */

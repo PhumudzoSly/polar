@@ -8,15 +8,18 @@ from polar.benefit.repository import BenefitRepository
 from polar.benefit.strategies.meter_credit.properties import (
     BenefitMeterCreditProperties,
 )
+from polar.catalog.repository import CatalogProductRepository
 from polar.meter.repository import MeterRepository
 from polar.models import (
     Benefit,
+    Catalog,
     Meter,
     Organization,
     Product,
     ProductPriceMeteredTiers,
 )
 from polar.models.benefit import BenefitType
+from polar.models.catalog import CatalogStatus
 from polar.postgres import AsyncReadSession
 from polar.product.repository import ProductRepository
 
@@ -27,6 +30,7 @@ from .schemas import (
     ConfigBenefit,
     ConfigBenefitRead,
     ConfigExport,
+    ConfigExportCatalog,
     ConfigExportDocument,
     ConfigMeter,
     ConfigMeterRead,
@@ -188,7 +192,7 @@ def _settings(organization: Organization) -> ConfigSettingsRead:
 
 
 async def export_config(
-    session: AsyncReadSession, organization: Organization
+    session: AsyncReadSession, organization: Organization, catalog: Catalog | None
 ) -> ConfigExport:
     skipped: list[ConfigSkippedResource] = []
 
@@ -220,11 +224,16 @@ async def export_config(
     )
 
     product_repository = ProductRepository.from_session(session)
+    products_statement = (
+        product_repository.get_organization_statement(organization.id)
+        if catalog is None or catalog.status == CatalogStatus.live
+        else CatalogProductRepository.from_session(session).get_products_statement(
+            catalog.id
+        )
+    )
     products, _ = await _export_section(
         ConfigResource.product,
-        product_repository.stream(
-            product_repository.get_organization_statement(organization.id)
-        ),
+        product_repository.stream(products_statement),
         MAXIMUM_PRODUCTS,
         skipped,
         name=lambda product: product.name,
@@ -242,4 +251,7 @@ async def export_config(
             products=products,
         ),
         skipped=skipped,
+        catalog=None
+        if catalog is None
+        else ConfigExportCatalog.model_validate(catalog),
     )
