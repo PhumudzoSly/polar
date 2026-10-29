@@ -1,5 +1,13 @@
 # @polar-sh/hono
 
+## 2.1.3
+
+### Patch Changes
+
+- Updated dependencies [873039e]
+- Updated dependencies [44c022b]
+  - @polar-sh/checkout@0.6.0
+
 ## 2.1.2
 
 ### Patch Changes
