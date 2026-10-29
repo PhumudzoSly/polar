@@ -63694,6 +63694,8 @@ export interface operations {
       query?: {
         /** @description The ID of the organization to export. **Required unless you use an organization token.** */
         organization_id?: string | null
+        /** @description Copy resources between organizations, e.g. from sandbox to production. Works without config as code. Export falls back to each resource's ID when it has no `external_id`; plan and apply only create resources and never change settings or webhook endpoints. */
+        copy?: boolean
       }
       header?: never
       path?: never
@@ -63743,7 +63745,10 @@ export interface operations {
   }
   'config:apply': {
     parameters: {
-      query?: never
+      query?: {
+        /** @description Copy resources between organizations, e.g. from sandbox to production. Works without config as code. Export falls back to each resource's ID when it has no `external_id`; plan and apply only create resources and never change settings or webhook endpoints. */
+        copy?: boolean
+      }
       header?: never
       path?: never
       cookie?: never
@@ -63810,7 +63815,10 @@ export interface operations {
   }
   'config:plan': {
     parameters: {
-      query?: never
+      query?: {
+        /** @description Copy resources between organizations, e.g. from sandbox to production. Works without config as code. Export falls back to each resource's ID when it has no `external_id`; plan and apply only create resources and never change settings or webhook endpoints. */
+        copy?: boolean
+      }
       header?: never
       path?: never
       cookie?: never

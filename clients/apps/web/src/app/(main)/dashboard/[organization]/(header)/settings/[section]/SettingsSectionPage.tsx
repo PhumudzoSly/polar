@@ -4,6 +4,7 @@ import { ManagedAsCodeBadge } from '@/components/Dashboard/ManagedAsCodeBadge'
 import AccessRestricted from '@/components/Finance/AccessRestricted'
 import { DashboardBody } from '@/components/Layout/DashboardLayout'
 import FeatureSettings from '@/components/Settings/FeatureSettings'
+import OrganizationConfigCopySettings from '@/components/Settings/OrganizationConfigCopySettings'
 import OrganizationAccessTokensSettings from '@/components/Settings/OrganizationAccessTokensSettings'
 import OrganizationCustomerEmailSettings from '@/components/Settings/OrganizationCustomerEmailSettings'
 import OrganizationCustomerPortalSettings from '@/components/Settings/OrganizationCustomerPortalSettings'
@@ -137,6 +138,13 @@ const SectionContent = ({
           )}
           <FeatureSettings organization={organization} readOnly={readOnly} />
         </>
+      )
+    case 'import-export':
+      return (
+        <OrganizationConfigCopySettings
+          organization={organization}
+          readOnly={readOnly}
+        />
       )
     case 'notifications':
       return <NotificationsSettings organization={organization} />

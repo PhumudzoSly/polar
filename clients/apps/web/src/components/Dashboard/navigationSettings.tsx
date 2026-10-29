@@ -5,6 +5,7 @@ import {
 } from '@/components/Settings/settingsSections'
 import { schemas } from '@polar-sh/client'
 import {
+  Copy,
   CircleUserRound,
   CodeXml,
   CreditCard,
@@ -93,6 +94,7 @@ const settingsGroupsList = (
         },
         section('domains', <Globe size="1em" />),
         section('features', <FlaskConical size="1em" />),
+        section('import-export', <Copy size="1em" />),
       ],
     },
     {

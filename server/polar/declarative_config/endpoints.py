@@ -26,6 +26,16 @@ from .service import declarative_config as declarative_config_service
 
 router = APIRouter(prefix="/config", tags=["config", APITag.private])
 
+CopyQuery = Query(
+    False,
+    description=(
+        "Copy resources between organizations, e.g. from sandbox to production. "
+        "Works without config as code. Export falls back to each resource's ID "
+        "when it has no `external_id`; plan and apply only create resources and "
+        "never change settings or webhook endpoints."
+    ),
+)
+
 
 @router.get(
     "/",
@@ -53,6 +63,7 @@ async def export(
             "**Required unless you use an organization token.**"
         ),
     ),
+    copy: bool = CopyQuery,
     session: AsyncReadSession = Depends(get_db_read_session),
 ) -> ConfigExport:
     """
@@ -68,7 +79,7 @@ async def export(
     Requires the read or write scope of every exported section.
     """
     return await declarative_config_service.export(
-        session, auth_subject, organization_id
+        session, auth_subject, organization_id, copy=copy
     )
 
 
@@ -103,6 +114,7 @@ async def export(
 async def apply(
     config: Config,
     auth_subject: ConfigWrite,
+    copy: bool = CopyQuery,
     session: AsyncSession = Depends(get_db_session),
     redis: Redis = Depends(get_redis),
 ) -> ConfigApplyResult:
@@ -119,7 +131,9 @@ async def apply(
 
     Each section requires the write scope for its resource.
     """
-    return await declarative_config_service.apply(session, redis, auth_subject, config)
+    return await declarative_config_service.apply(
+        session, redis, auth_subject, config, copy=copy
+    )
 
 
 @router.post(
@@ -142,6 +156,7 @@ async def apply(
 async def plan(
     config: Config,
     auth_subject: ConfigRead,
+    copy: bool = CopyQuery,
     session: AsyncSession = Depends(get_db_session),
 ) -> ConfigPlan:
     """
@@ -152,7 +167,9 @@ async def plan(
 
     Each section requires the read or write scope for its resource.
     """
-    return await declarative_config_service.plan(session, auth_subject, config)
+    return await declarative_config_service.plan(
+        session, auth_subject, config, copy=copy
+    )
 
 
 @router.post(

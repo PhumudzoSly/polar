@@ -69,18 +69,20 @@ async def _export_section[ModelT: _Exportable, EntryT](
     *,
     name: Callable[[ModelT], str],
     archived: Callable[[ModelT], bool],
-    entry: Callable[[ModelT], EntryT | None],
+    entry: Callable[[ModelT, str], EntryT | None],
+    copy: bool,
 ) -> tuple[list[EntryT], dict[str, str]]:
     """
     `entry` returns `None` when the model references something left out of the
-    export.
+    export. When copying, a model without `external_id` is exported under its ID.
     """
     entries: list[EntryT] = []
     external_ids: dict[str, str] = {}
     skipped_count = 0
     async for model in models:
         reason: ConfigSkippedReason | None = None
-        if model.external_id is None:
+        external_id = model.external_id or (str(model.id) if copy else None)
+        if external_id is None:
             reason = ConfigSkippedReason.missing_external_id
         elif archived(model):
             reason = ConfigSkippedReason.archived
@@ -88,14 +90,14 @@ async def _export_section[ModelT: _Exportable, EntryT](
             reason = ConfigSkippedReason.over_limit
         else:
             try:
-                exported = entry(model)
+                exported = entry(model, external_id)
             except ValidationError:
                 exported = None
             if exported is None:
                 reason = ConfigSkippedReason.invalid
             else:
                 entries.append(exported)
-                external_ids[str(model.id)] = model.external_id
+                external_ids[str(model.id)] = external_id
         if reason is not None and skipped_count < maximum:
             skipped_count += 1
             skipped.append(
@@ -108,9 +110,9 @@ async def _export_section[ModelT: _Exportable, EntryT](
     return entries, external_ids
 
 
-def _meter_entry(meter: Meter) -> ConfigMeterRead:
+def _meter_entry(meter: Meter, external_id: str) -> ConfigMeterRead:
     config = ConfigMeter(
-        external_id=cast(str, meter.external_id),
+        external_id=external_id,
         name=meter.name,
         unit=meter.unit,
         custom_label=meter.custom_label,
@@ -123,11 +125,11 @@ def _meter_entry(meter: Meter) -> ConfigMeterRead:
 
 
 def _benefit_entry(
-    benefit: Benefit, meter_external_ids: dict[str, str]
+    benefit: Benefit, external_id: str, meter_external_ids: dict[str, str]
 ) -> ConfigBenefitRead | None:
     data: dict[str, Any] = {
         "type": benefit.type,
-        "external_id": benefit.external_id,
+        "external_id": external_id,
         "description": benefit.description,
         "visibility": benefit.visibility,
         "metadata": benefit.user_metadata,
@@ -143,6 +145,7 @@ def _benefit_entry(
 
 def _product_entry(
     product: Product,
+    external_id: str,
     meter_external_ids: dict[str, str],
     benefit_external_ids: dict[str, str],
 ) -> ConfigProductRead | None:
@@ -159,7 +162,7 @@ def _product_entry(
         return None
     config = ConfigProduct.model_validate(
         {
-            "external_id": product.external_id,
+            "external_id": external_id,
             "name": product.name,
             "description": product.description,
             "visibility": product.visibility,
@@ -188,7 +191,7 @@ def _settings(organization: Organization) -> ConfigSettingsRead:
 
 
 async def export_config(
-    session: AsyncReadSession, organization: Organization
+    session: AsyncReadSession, organization: Organization, *, copy: bool = False
 ) -> ConfigExport:
     skipped: list[ConfigSkippedResource] = []
 
@@ -203,6 +206,7 @@ async def export_config(
         name=lambda meter: meter.name,
         archived=lambda meter: meter.archived_at is not None,
         entry=_meter_entry,
+        copy=copy,
     )
 
     benefit_repository = BenefitRepository.from_session(session)
@@ -216,7 +220,10 @@ async def export_config(
         skipped,
         name=lambda benefit: benefit.description,
         archived=lambda benefit: False,
-        entry=lambda benefit: _benefit_entry(benefit, meter_external_ids),
+        entry=lambda benefit, external_id: _benefit_entry(
+            benefit, external_id, meter_external_ids
+        ),
+        copy=copy,
     )
 
     product_repository = ProductRepository.from_session(session)
@@ -229,9 +236,10 @@ async def export_config(
         skipped,
         name=lambda product: product.name,
         archived=lambda product: product.is_archived,
-        entry=lambda product: _product_entry(
-            product, meter_external_ids, benefit_external_ids
+        entry=lambda product, external_id: _product_entry(
+            product, external_id, meter_external_ids, benefit_external_ids
         ),
+        copy=copy,
     )
 
     return ConfigExport(

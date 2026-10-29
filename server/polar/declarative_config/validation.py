@@ -436,6 +436,41 @@ def changed_intervals(changes: Sequence[ProductChange]) -> list[ConfigIssue]:
     return issues
 
 
+def copy_issues(config: Config, changes: ConfigChanges) -> list[ConfigIssue]:
+    issues = [
+        ConfigIssue(
+            severity=ConfigIssueSeverity.error,
+            type=ConfigIssueType.not_supported,
+            loc=["body", section],
+            msg=f"Copying doesn't change {section}. Remove it from the config.",
+            input=None,
+        )
+        for section in ("settings", "webhooks")
+        if section in config.model_fields_set
+    ]
+    sections: list[tuple[ConfigResource, Sequence[ResourceChange[Any, Any]]]] = [
+        (ConfigResource.meter, changes.meters),
+        (ConfigResource.benefit, changes.benefits),
+        (ConfigResource.product, changes.products),
+    ]
+    for resource, resource_changes in sections:
+        issues.extend(
+            ConfigIssue(
+                severity=ConfigIssueSeverity.error,
+                type=ConfigIssueType.not_supported,
+                loc=_loc(resource, change.index),
+                msg=(
+                    f"This {resource} already exists with different values. "
+                    "Copying only creates new resources."
+                ),
+                input=change.config.external_id,
+            )
+            for change in resource_changes
+            if change.action == ConfigAction.updated
+        )
+    return issues
+
+
 def locked_meter_fields(changes: list[MeterChange]) -> list[ConfigIssue]:
     return [
         ConfigIssue(

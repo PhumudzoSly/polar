@@ -20,6 +20,7 @@ export const SETTINGS_SECTIONS = {
   domains: { title: 'Domains' },
   'access-tokens': { title: 'Access Tokens' },
   features: { title: 'Preview Features' },
+  'import-export': { title: 'Import & Export' },
   notifications: { title: 'Notifications' },
   profile: { title: 'Profile' },
   security: { title: 'Security' },

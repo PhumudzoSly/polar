@@ -3181,3 +3181,86 @@ class TestExport:
     ) -> None:
         with pytest.raises(InsufficientScopeError):
             await declarative_config_service.export(session, auth_subject, None)
+
+
+@pytest.mark.anyio
+@pytest.mark.auth(AuthSubjectFixture(subject="organization"))
+class TestCopy:
+    async def test_export_falls_back_to_id(
+        self,
+        save_fixture: SaveFixture,
+        session: AsyncSession,
+        auth_subject: AuthSubject[Organization],
+        organization: Organization,
+    ) -> None:
+        product = await create_product(
+            save_fixture,
+            organization=organization,
+            recurring_interval=SubscriptionRecurringInterval.month,
+        )
+
+        exported = await declarative_config_service.export(
+            session, auth_subject, None, copy=True
+        )
+
+        [exported_product] = exported.config.products
+        assert exported_product.external_id == str(product.id)
+        assert exported.skipped == []
+
+    async def test_apply_creates_without_enabling_config_as_code(
+        self,
+        session: AsyncSession,
+        redis: Redis,
+        auth_subject: AuthSubject[Organization],
+        organization: Organization,
+    ) -> None:
+        config = Config.model_validate({"products": [MONTHLY_PRO]})
+
+        plan = await declarative_config_service.plan(
+            session, auth_subject, config, copy=True
+        )
+        result = await declarative_config_service.apply(
+            session, redis, auth_subject, config, copy=True
+        )
+
+        assert plan.issues == []
+        assert [change.action for change in result.changes] == [ConfigAction.created]
+        assert organization.is_config_as_code_enabled is False
+
+    async def test_rejects_updates(
+        self,
+        session: AsyncSession,
+        redis: Redis,
+        auth_subject: AuthSubject[Organization],
+    ) -> None:
+        await declarative_config_service.apply(
+            session,
+            redis,
+            auth_subject,
+            Config.model_validate({"products": [MONTHLY_PRO]}),
+            copy=True,
+        )
+
+        plan = await declarative_config_service.plan(
+            session,
+            auth_subject,
+            Config.model_validate({"products": [MONTHLY_PRO_25]}),
+            copy=True,
+        )
+
+        [issue] = plan.issues
+        assert issue.severity == ConfigIssueSeverity.error
+        assert issue.type == ConfigIssueType.not_supported
+        assert issue.loc == ["body", "products", 0]
+
+    async def test_rejects_settings(
+        self, session: AsyncSession, auth_subject: AuthSubject[Organization]
+    ) -> None:
+        plan = await declarative_config_service.plan(
+            session,
+            auth_subject,
+            Config.model_validate({"settings": {"payments": {"currency": "usd"}}}),
+            copy=True,
+        )
+
+        assert [issue.loc for issue in plan.issues] == [["body", "settings"]]

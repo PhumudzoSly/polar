@@ -191,10 +191,16 @@ class DeclarativeConfigService:
         redis: Redis,
         auth_subject: AuthSubject[User | Organization | Agent],
         config: Config,
+        *,
+        copy: bool = False,
     ) -> ConfigApplyResult:
         _assert_section_scopes(auth_subject, config, write=True)
         organization = await self._get_organization(
-            session, auth_subject, config, OrganizationPermission.products_manage
+            session,
+            auth_subject,
+            config,
+            OrganizationPermission.products_manage,
+            copy=copy,
         )
         if "settings" in config.model_fields_set:
             await assert_organization_permission(
@@ -209,6 +215,8 @@ class DeclarativeConfigService:
             session, organization, config, for_update=True
         )
         issues.extend(catalogs.benefit_issues(changes))
+        if copy:
+            issues.extend(validation.copy_issues(config, changes))
         errors = [
             issue for issue in issues if issue.severity == ConfigIssueSeverity.error
         ]
@@ -283,16 +291,24 @@ class DeclarativeConfigService:
         session: AsyncSession,
         auth_subject: AuthSubject[User | Organization | Agent],
         config: Config,
+        *,
+        copy: bool = False,
     ) -> ConfigPlan:
         _assert_section_scopes(auth_subject, config, write=False)
         organization = await self._get_organization(
-            session, auth_subject, config, OrganizationPermission.products_read
+            session,
+            auth_subject,
+            config,
+            OrganizationPermission.products_read,
+            copy=copy,
         )
         await _assert_webhooks_permission(session, auth_subject, config, organization)
         changes, issues = await validation.check(
             session, organization, config, for_update=False
         )
         issues.extend(catalogs.benefit_issues(changes))
+        if copy:
+            issues.extend(validation.copy_issues(config, changes))
         live = await CatalogRepository.from_session(session).get_live(organization.id)
         catalog_before, catalog_after = await catalog_service.get_next_version_hash(
             session, organization, live, catalogs.product_definitions(changes)
@@ -449,6 +465,8 @@ class DeclarativeConfigService:
         session: AsyncReadSession,
         auth_subject: AuthSubject[User | Organization | Agent],
         organization_id: UUID | None,
+        *,
+        copy: bool = False,
     ) -> ConfigExport:
         _assert_scopes(auth_subject, EXPORTED_SECTIONS, write=False)
         organization = await self._get_organization(
@@ -456,8 +474,9 @@ class DeclarativeConfigService:
             auth_subject,
             _OrganizationTarget(organization_id),
             OrganizationPermission.products_read,
+            copy=copy,
         )
-        return await export_config(session, organization)
+        return await export_config(session, organization, copy=copy)
 
     def _plan_changes(
         self, resource: ConfigResource, changes: Sequence[ResourceChange[Any, Any]]
@@ -478,12 +497,14 @@ class DeclarativeConfigService:
         auth_subject: AuthSubject[User | Organization | Agent],
         target: OrganizationIDModel,
         permission: OrganizationPermission,
+        *,
+        copy: bool = False,
     ) -> Organization:
         organization = await get_payload_organization(session, auth_subject, target)
         await assert_organization_permission(
             session, auth_subject, organization.id, permission
         )
-        if not organization.is_config_as_code_enabled:
+        if not copy and not organization.is_config_as_code_enabled:
             raise ConfigAsCodeNotEnabled()
         return organization
 
